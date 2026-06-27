@@ -1,0 +1,5 @@
+/run/initialize
+/gun/position 0.65 0 -11 cm
+/gun/particle mu-
+/gun/energy 2 GeV
+/run/beamOn 100000

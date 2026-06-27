@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/marek/geant4_workspace/Geant4_Interface/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,7 @@
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/Geant4_Interface.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/edit_cache.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/rebuild_cache.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/list_install_components.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/install.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/install/local.dir
+/home/marek/geant4_workspace/Geant4_Interface/build/CMakeFiles/install/strip.dir
