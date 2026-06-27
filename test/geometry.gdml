@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gdml>
+
+  <solids>
+    <box name="world_solid" x="250" y="250" z="250"/>
+    <box name="sensor_solid" x="14" y="14" z="14"/>
+    <box name="shield_solid" x="50" y="50" z="10"/>
+  </solids>
+
+  <structure>
+    <volume name="sensor_log">
+      <materialref ref="G4_CESIUM_IODIDE"/>
+      <solidref ref="sensor_solid"/>
+      <auxiliary auxtype="SensDet" auxvalue="true"/>
+    </volume>
+
+    <volume name="shield_log">
+      <materialref ref="G4_Fe"/>
+      <solidref ref="shield_solid"/>
+    </volume>
+
+    <volume name="World">
+      <materialref ref="G4_AIR"/>
+      <solidref ref="world_solid"/>
+
+      <physvol name="sensor_phys">
+        <volumeref ref="sensor_log"/>
+        <position x="0" y="0" z="0" unit="cm"/>
+      </physvol>
+
+      <physvol name="shield_phys">
+        <volumeref ref="shield_log"/>
+        <position x="0" y="0" z="-10" unit="cm"/>
+      </physvol>
+
+    </volume>
+
+  </structure>
+
+  <setup name="Default" version="1.0">
+    <world ref="World"/>
+  </setup>
+
+</gdml>

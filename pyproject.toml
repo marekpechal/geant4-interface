@@ -1,0 +1,21 @@
+[project]
+name = "geant4-interface"
+version = "0.1.0"
+description = "Python interface for Geant4 in WSL environment"
+authors = [
+    {name = "Marek Pechal", email = "marek.pechal@gmail.com"},
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.0",
+    "pyvista>=0.48.4",
+]
+license = {text = "MIT"}
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
