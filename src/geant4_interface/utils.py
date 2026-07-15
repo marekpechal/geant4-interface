@@ -1,7 +1,9 @@
 import tempfile
 import pyvista as pv
 
-def plot_vrml_from_string(vrml_string):
+def plot_vrml_from_string(vrml_string: str) -> None:
+    """Plot 3d geometry from VRML string."""
+    
     with tempfile.NamedTemporaryFile(
             mode='w',
             suffix='.wrl',

@@ -1,8 +1,9 @@
+from typing import Dict
 import subprocess
 import logging
 import shutil, os
 import xml.etree.cElementTree as ET
-from .data_analysis import Histogram
+from .data_analysis import Histogram1d
 from .geometry import Geometry
 logger = logging.getLogger(__name__)
 
@@ -10,15 +11,28 @@ WSL_ENV_NAME = "Geant4-Env"
 WSL_G4IFACE_PATH = "/home/marek/geant4_workspace/Geant4_Interface/build/"
 WSL_EXEC_NAME = "Geant4_Interface"
 
-def wsl_linux_to_win_filename(wsl_linux_filename):
+def wsl_linux_to_win_filename(wsl_linux_filename: str) -> str:
+    """
+    Convert path and filename in the WSL environemnt into the host Windows
+    system's path and filename.
+
+    Parameters
+    ----------
+    wsl_linux_filename : str
+
+    Returns
+    -------
+    win_filename : str
+    """
+
     return f"\\\\wsl.localhost\\{WSL_ENV_NAME}" \
         f"{wsl_linux_filename}".replace("/", "\\")
 
 class WSLFilename(str):
-    pass
+    """Representation of a filename in the WSL environment."""
 
 class HostFilename(str):
-    pass
+    """Representation of a filename in the host system."""
 
 class ContentIn:
     """
@@ -40,7 +54,29 @@ class ContentIn:
     passed in.
 
     The manager deletes any created temporary files on exit.
+
+    Examples
+    --------
+    Pass file from host system to a command in the WSL environment.
+    ```
+    with ContentIn(HostFilename("file_on_host.mac")) as macro_filename:
+        run_linux_cmd(f"do_something_with {macro_filename}")
+    ```
+
+    Pass file from WSL system to a command in the WSL environment.
+    ```
+    with ContentIn(WSLFilename("file_in_wsl.mac")) as macro_filename:
+        run_linux_cmd(f"do_something_with {macro_filename}")
+    ```
+
+    Pass a string as a file to a command in the WSL environment.
+    ```
+    with ContentIn("file content as string...") as macro_filename:
+        run_linux_cmd(f"do_something_with {macro_filename}")
+    ```
+
     """
+
     def __init__(self, content, extension):
         self.content = content
         if isinstance(self.content, (WSLFilename, HostFilename)):
@@ -77,7 +113,15 @@ class ContentIn:
             logger.debug(f"removing {filename}")
             os.remove(filename)
 
-def run_linux_cmd(linux_cmd):
+def run_linux_cmd(linux_cmd: str) -> None:
+    """
+    Run Linux command inside a WSL environment.
+
+    Parameters
+    ----------
+    linux_cmd : str
+    """
+
     win_command = [
         "wsl", "-d", WSL_ENV_NAME,
         "--", "bash", "-i", "-l", "-c",
@@ -93,14 +137,47 @@ def run_linux_cmd(linux_cmd):
     return result.stdout.strip()
 
 def run_g4iface(
-        geometry,
-        macro=None,
-        run_ui=False,
-        return_histogram=False,
-        histogram_filename=None,
-        return_vrml=False,
-        use_gps=False,
-        ):
+        geometry: str | HostFilename | WSLFilename,
+        macro: str | HostFilename | WSLFilename = None,
+        run_ui: bool = False,
+        return_histogram: bool = False,
+        histogram_filename: str = None,
+        return_vrml: bool = False,
+        use_gps: bool = False,
+        ) -> Dict[str, Histogram1d]:
+    """
+    Run the Geant4 interface.
+
+    Parameters
+    ----------
+    geometry : str or HostFilename or WSLFilename
+        Geometry to be loaded into the interface.
+    macro : str or HostFilename or WSLFilename, optional
+        Macro to be run in the interface. Defaults to None.
+    run_ui : bool, optional
+        Whether to run the graphical user interface. Defaults to False.
+    return_histogram : bool, optional
+        Whether to return histogram data. Defaults to False.
+    histogram_filename : str, optional
+        Name of the file into which to save the histogram data. Needs to be
+        given if `return_histogram` is True.
+        Defaults to None.
+    return_vrml : bool, optional
+        Whether to return a VRML string. Defaults to False.
+    use_gps : bool, optional
+        Whether to use a general particle source. Defaults to False.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+            "histograms" : Dict[str, Histogram1d]
+                Histogram data. Present if `return_histogram` is True.
+            "vrml" : str
+                VRML representation of the geometry and simulated traces.
+                Present if `return_vrml` is True.
+    """
+
     logger.debug(
         f"running Geant4 interface ("
         f"run_ui={run_ui}, "
@@ -135,7 +212,8 @@ def run_g4iface(
         result["histograms"] = {}
         with open(wsl_linux_to_win_filename(histogram_filename), "rb") as f:
             for root in ET.parse(f).getroot().findall("histogram1d"):
-                result["histograms"][root.attrib["name"]] = Histogram.from_xml(root)
+                result["histograms"][root.attrib["name"]] = \
+                    Histogram1d.from_xml(root)
 
     for filename in to_delete:
         logger.debug(f"removing {filename}")
