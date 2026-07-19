@@ -1,9 +1,10 @@
 from typing import Dict
 import subprocess
 import logging
-import shutil, os
-import xml.etree.cElementTree as ET
-from .data_analysis import Histogram1d
+import shutil, os, glob
+import xml.etree.ElementTree as ET
+from .data_analysis.histogram import Histogram1d
+from .data_analysis.tracking import read_tracking_info
 from .geometry import Geometry
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,8 @@ def run_g4iface(
         macro: str | HostFilename | WSLFilename = None,
         run_ui: bool = False,
         return_histogram: bool = False,
-        histogram_filename: str = None,
+        return_tracking: bool = False,
+        output_data_filename: str = None,
         return_vrml: bool = False,
         use_gps: bool = False,
         ) -> Dict[str, Histogram1d]:
@@ -158,10 +160,10 @@ def run_g4iface(
         Whether to run the graphical user interface. Defaults to False.
     return_histogram : bool, optional
         Whether to return histogram data. Defaults to False.
-    histogram_filename : str, optional
-        Name of the file into which to save the histogram data. Needs to be
-        given if `return_histogram` is True.
-        Defaults to None.
+    return_tracking : bool, optional
+        Whether to return tracking data. Defaults to False.
+    output_data_filename : str, optional
+        Name of the file into which to save output data.
     return_vrml : bool, optional
         Whether to return a VRML string. Defaults to False.
     use_gps : bool, optional
@@ -182,13 +184,15 @@ def run_g4iface(
         f"running Geant4 interface ("
         f"run_ui={run_ui}, "
         f"return_histogram={return_histogram}, "
-        f"histogram_filename={histogram_filename})")
+        f"output_data_filename={output_data_filename})")
     logger.debug(f"geometry passed as {type(geometry)}")
     logger.debug(f"macro passed as {type(macro)}")
     to_delete = []
-    if (histogram_filename is None) and return_histogram:
-        histogram_filename = f"{WSL_G4IFACE_PATH}tmp.xml"
-        to_delete.append(wsl_linux_to_win_filename(histogram_filename))
+    if (output_data_filename is None) and (return_histogram or return_tracking):
+        output_data_filename = f"{WSL_G4IFACE_PATH}tmp.xml"
+        to_delete.append(wsl_linux_to_win_filename(output_data_filename))
+        to_delete.append(wsl_linux_to_win_filename(
+            output_data_filename[:-4]+"_nt_StepData_t*.xml"))
 
     with ContentIn(macro, "mac") as macro_filename:
         with ContentIn(geometry, "gdml") as geometry_filename:
@@ -199,25 +203,38 @@ def run_g4iface(
 
             if run_ui:
                 linux_cmd += " -i"
+            if return_tracking:
+                linux_cmd += " -t"
             if use_gps:
                 linux_cmd += " -g"
-            if histogram_filename is not None:
-                linux_cmd += f" -o {histogram_filename}"
+            if output_data_filename is not None:
+                linux_cmd += f" -o {output_data_filename}"
             run_linux_cmd(linux_cmd)
 
     result = {}
 
     if return_histogram:
-        logger.debug(f"reading {histogram_filename}")
+        logger.debug(f"reading {output_data_filename}")
         result["histograms"] = {}
-        with open(wsl_linux_to_win_filename(histogram_filename), "rb") as f:
+        with open(wsl_linux_to_win_filename(output_data_filename), "rb") as f:
             for root in ET.parse(f).getroot().findall("histogram1d"):
                 result["histograms"][root.attrib["name"]] = \
                     Histogram1d.from_xml(root)
 
+    if return_tracking:
+        tracking_info = []
+        for filename in glob.glob(wsl_linux_to_win_filename(
+                output_data_filename[:-4]+"_nt_StepData_t*.xml")):
+            logger.debug(f"reading {filename}")
+            with open(filename, "rb") as f:
+                tracking_info += read_tracking_info(ET.parse(f).getroot())
+        result["tracking_info"] = sorted(tracking_info,
+            key=lambda e: e.event_id)
+
     for filename in to_delete:
-        logger.debug(f"removing {filename}")
-        os.remove(filename)
+        for f in glob.glob(filename):
+            logger.debug(f"removing {f}")
+            os.remove(f)
 
     if return_vrml:
         filename = wsl_linux_to_win_filename(f"{WSL_G4IFACE_PATH}g4_00.wrl")
